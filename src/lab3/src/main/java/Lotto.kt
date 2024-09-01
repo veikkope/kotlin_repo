@@ -1,5 +1,3 @@
-import java.util.*
-
 class Lotto {
     companion object {
         val lottoRange = 1..40
@@ -23,7 +21,7 @@ class Lotto {
         return guess.size == count && numDistinct(guess) == count && guess.all { it in range }
     }
 
-    fun checkGuess(guess: List<Int>, secret: List<Int> = pickNDistinct(lottoRange, n)!!): Int {
+    fun checkGuess(guess: List<Int>, secret: List<Int>): Int {
         return if (isLegalLottoGuess(guess)) {
             numCommon(guess, secret)
         } else {
@@ -31,16 +29,33 @@ class Lotto {
         }
     }
 }
-fun readNDistinct(low: Int, high: Int, n: Int): List<Int> {
-    while (true) {
-        println("Give $n numbers from $low to $high, separated by commas:")
-        val input = readLine() ?: return emptyList()
-        val numbers = input.split(',').mapNotNull { it.trim().toIntOrNull() }
-        if (numbers.size == n && numbers.distinct().size == n && numbers.all { it in low..high }) {
-            return numbers
+
+fun findLotto(lotto: Lotto): Pair<Int, List<Int>> {
+    val correctNumbers = mutableListOf<Int>()
+    val candidates = Lotto.lottoRange.toMutableList()
+    var steps = 0
+
+    while (correctNumbers.size < Lotto.n) {
+        val currentGuess = correctNumbers.toMutableList()
+
+        for (i in 0 until (Lotto.n - correctNumbers.size)) {
+            currentGuess.add(candidates[i])
         }
-        println("Invalid input. Please try again.")
+
+        steps++
+        val correctCount = lotto.checkGuess(currentGuess, lotto.pickNDistinct(Lotto.lottoRange, Lotto.n)!!)
+
+        if (correctCount > correctNumbers.size) {
+            correctNumbers.addAll(currentGuess.filter { it !in correctNumbers })
+            candidates.removeAll(currentGuess)
+        } else {
+            candidates.removeAll(currentGuess.filter { it !in correctNumbers })
+        }
+
+        if (correctNumbers.size == Lotto.n) break
     }
+
+    return Pair(steps, correctNumbers.sorted())
 }
 
 fun playLotto() {
@@ -53,38 +68,28 @@ fun playLotto() {
 
         println("lotto numbers: $secretNumbers, you got $correctCount correct")
 
+        val (steps, computerGuess) = findLotto(lotto)
+        println("computer guess in $steps steps is $computerGuess")
+
         println("More? (Y/N): ")
-        playAgain = readLine()?.trim()?.uppercase(Locale.getDefault()) ?: "N"
+        playAgain = readLine()?.trim()?.uppercase() ?: "N"
     } while (playAgain == "Y")
 }
-fun findLotto(lotto: Lotto): Pair<Int, List<Int>> {
-    val allPossibleNumbers = Lotto.lottoRange.toList().combinations(Lotto.n)
-    val secretNumbers = lotto.pickNDistinct(Lotto.lottoRange, Lotto.n)!!
-    var steps = 0
 
-    for (guess in allPossibleNumbers) {
-        steps++
-        val result = lotto.checkGuess(guess, secretNumbers)
-        if (result == Lotto.n) {
-            return Pair(steps, guess)
+fun readNDistinct(low: Int, high: Int, n: Int): List<Int> {
+    while (true) {
+        println("Give $n numbers from $low to $high, separated by commas:")
+        val input = readLine() ?: return emptyList()
+        val numbers = input.split(',').mapNotNull { it.trim().toIntOrNull() }
+        if (numbers.size == n && numbers.distinct().size == n && numbers.all { it in low..high }) {
+            return numbers
         }
-    }
-
-    return Pair(steps, emptyList())
-}
-
-fun <T> List<T>.combinations(n: Int): List<List<T>> {
-    if (n == 0) return listOf(emptyList())
-    return if (size < n) emptyList() else {
-        (0 until size).flatMap { i ->
-            (this.subList(i + 1, size)).combinations(n - 1).map { listOf(this[i]) + it }
-        }
+        println("Invalid input. Please try again.")
     }
 }
 
 fun main() {
     playLotto()
-
 }
 
 
